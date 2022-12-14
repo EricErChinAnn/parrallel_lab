@@ -1,0 +1,43 @@
+{{#extends "base"}}
+
+{{#block "content"}}
+<table class="table">
+    <tread>
+        <th>ID</th>
+        <th>Title</th>
+        <th>Cost in CENTS</th>
+        <th>Description</th>
+        <th>Date</th>
+        <th>Stock</th>
+        <th>Height in CM</th>
+        <th>Width in CM</th>
+        <th>Media Property</th>
+        <th></th>
+    </tread>
+    <tbody>
+        {{#each products}}
+        <tr>
+            <td>{{this.id}}</td>
+            <td>{{this.title}}</td>
+            <td>{{this.cost}}</td>
+            <td>{{this.description}}</td>
+            <td>{{this.date}}</td>
+            <td>{{this.stock}}</td>
+            <td>{{this.height}}</td>
+            <td>{{this.width}}</td>
+            <td>{{this.media_property_id.name}}</td>
+            <td>
+                <div class="d-flex flex-row">
+                    <a href="/products/update/{{this.id}}" class="btn btn-primary m-1">Edit</a>
+                    <a href="/products/delete/{{this.id}}" class="btn btn-danger m-1">Delete</a>
+                </div>
+            </td>
+        </tr>
+        {{/each}}
+    </tbody>
+</table>
+<a href="/products/create" class="btn btn-primary m-1">Create New</a>
+
+{{/block}}
+
+{{/extends}}

@@ -19,6 +19,7 @@ app.use(
 );
 
 const landingRoutes = require("./routes/landing/landing");
+const productsRoutes = require("./routes/products/products")
 
 async function main(){
 
@@ -33,6 +34,8 @@ async function main(){
 // });
 
 app.use("/",landingRoutes);
+
+app.use("/products",productsRoutes);
 
 }
 
