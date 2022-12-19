@@ -15,16 +15,14 @@ exports.setup = function(options, seedLink) {
 };
 
 exports.up = function(db) {
-  return db.addColumn("posters","media_property_id",{
-    type:"int",
-    unsigned:true,
-    notNull: true,
-    default: 1
-  });
+  return db.createTable('tags', {
+    id: { type: 'int', primaryKey:true, autoIncrement:true, unsigned:true},
+    name: { type: 'string', length:100},
+});
 };
 
 exports.down = function(db) {
-  return db.removeColumn("posters","media_property_id");
+  return db.dropTable('tags');
 };
 
 exports._meta = {

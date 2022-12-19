@@ -2,17 +2,19 @@ const express = require("express");
 const { redirect } = require("express/lib/response");
 const async = require("hbs/lib/async");
 const router = express.Router();
+const { checkIfAuthenticated } = require("../../middlewares")
 
 const { bootstrapField, createProductForm } = require("../../forms")
 
-const { Poster, MediaProperty } = require("../../model/index");
+const { Poster, MediaProperty, Tag } = require("../../model/index");
 
 
 findProductViaId = async (productId) => {
     const product = await Poster.where({
         "id": productId
     }).fetch({
-        "require": true
+        "require": true,
+        withRelated:["tags"]
     })
 
     return product
@@ -26,11 +28,18 @@ getAllMediaProperties = async () => {
     return mediaProperties
 }
 
+getAllTags = async ()=>{
+    const allTags = await Tag.fetchAll().map((e)=>{
+        return [e.get("id"), e.get("name")]
+    })
+    return allTags
+}
+
 
 //show all post
 router.get("/", async (req, res) => {
     let products = await Poster.collection().fetch({
-        withRelated:["media_property_id"]
+        withRelated:["media_property_id", "tags"]
     });
 
     res.render("./products/index.hbs", {
@@ -39,22 +48,28 @@ router.get("/", async (req, res) => {
 })
 
 
+
 //Create new post
-router.get('/create', async (req, res) => {
+router.get('/create',checkIfAuthenticated, async (req, res) => {
     const allMediaProperties = await getAllMediaProperties();
+    const allTags = await getAllTags();
     
-    const productForm = createProductForm(allMediaProperties);
+    const productForm = createProductForm(allMediaProperties, allTags);
 
     res.render('products/create', {
-        "form": productForm.toHTML(bootstrapField)
+        "form": productForm.toHTML(bootstrapField),
+        cloudinaryName: process.env.CLOUDINARY_NAME,
+        cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
+        cloudinaryPreset: process.env.CLOUDINARY_UPLOAD_PRESET
     })
 })
 
-router.post("/create", async (req, res) => {
+router.post("/create",checkIfAuthenticated, async (req, res) => {
 
     const allMediaProperties = await getAllMediaProperties();
+    const allTags = await getAllTags();
 
-    const productForm = createProductForm(allMediaProperties);
+    const productForm = createProductForm(allMediaProperties, allTags);
 
     productForm.handle(req, {
         "success": async (form) => {
@@ -67,16 +82,36 @@ router.post("/create", async (req, res) => {
             productObject.set("height", form.data.height);
             productObject.set("width", form.data.width);
             productObject.set("media_property_id", form.data.media_property_id);
+            
             await productObject.save();
+
+            let tags = form.data.tags
+            if(tags){
+                await productObject.tags().attach(tags.split(","));
+            }
+
+            req.flash("success_messages", 
+            `New Poster "${form.data.title}" has been created`)
 
             res.redirect("/products")
         },
         "empty": async (form) => {
+
+            req.flash("missing_messages", 
+            `Please fill in the required fields`)
+
             res.render("products/create.hbs", {
-                'form': form.toHTML(bootstrapField)
+                'form': form.toHTML(bootstrapField),
+                cloudinaryName: process.env.CLOUDINARY_NAME,
+                cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
+                cloudinaryPreset: process.env.CLOUDINARY_UPLOAD_PRESET
             })
         },
         "error": async (form) => {
+
+            req.flash("error_messages", 
+            `Please fill in the required fields`)
+
             res.render("products/create.hbs", {
                 'form': form.toHTML(bootstrapField)
             })
@@ -85,13 +120,17 @@ router.post("/create", async (req, res) => {
 })
 
 
+
 //Update a post
-router.get("/update/:productId", async (req, res) => {
+router.get("/update/:productId",checkIfAuthenticated, async (req, res) => {
     const product = await findProductViaId(req.params.productId)
 
     const allMediaProperties = await getAllMediaProperties();
+    const allTags = await getAllTags();
 
-    const productForm = createProductForm(allMediaProperties);
+    const productForm = createProductForm(allMediaProperties, allTags);
+
+    let selectedTags = await product.related("tags").pluck("id")
 
     var dateObj = product.get("date").toISOString().slice(0,10);
 
@@ -104,29 +143,50 @@ router.get("/update/:productId", async (req, res) => {
     productForm.fields.height.value = product.get("height");
     productForm.fields.width.value = product.get("width");
     productForm.fields.media_property_id.value = product.get("media_property_id");
+    productForm.fields.image_url.value = product.get("image_url")
+
+    productForm.fields.tags.value = selectedTags;
 
     res.render("products/update", {
         "form": productForm.toHTML(bootstrapField),
+        cloudinaryName: process.env.CLOUDINARY_NAME,
+        cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
+        cloudinaryPreset: process.env.CLOUDINARY_UPLOAD_PRESET,
         "product": product.toJSON()
     })
 })
 
-router.post("/update/:productId", async (req, res) => {
+router.post("/update/:productId",checkIfAuthenticated, async (req, res) => {
     const product = await findProductViaId(req.params.productId);
 
     const allMediaProperties = await getAllMediaProperties();
+    const allTags = await getAllTags();
 
-    const productForm = createProductForm(allMediaProperties);
+    const productForm = createProductForm(allMediaProperties, allTags);
 
     productForm.handle(req, {
         "success": async (form) => {
-            product.set(form.data);
+            let {tags, ...productData} = form.data
+            product.set(productData);
             product.save();
+
+            let tagsId = tags.split(",");
+            let currentTagsId = await product.related("tags").pluck("id");
+
+            await product.tags().detach(currentTagsId),
+            await product.tags().attach(tagsId)
+
+            req.flash("success_messages", 
+            `Poster "${form.data.title}" has been edited`)
+
             res.redirect("/products")
         },
         "error": async (form) => {
             res.render('products/update', {
                 'form': form.toHTML(bootstrapField),
+                cloudinaryName: process.env.CLOUDINARY_NAME,
+                cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
+                cloudinaryPreset: process.env.CLOUDINARY_UPLOAD_PRESET,
                 'product': product.toJSON()
             })
         }
@@ -134,8 +194,9 @@ router.post("/update/:productId", async (req, res) => {
 })
 
 
+
 //Delete a post
-router.get("/delete/:productId", async (req,res)=>{
+router.get("/delete/:productId",checkIfAuthenticated, async (req,res)=>{
     const product = await findProductViaId(req.params.productId)
     
     res.render("products/delete",{
@@ -143,8 +204,11 @@ router.get("/delete/:productId", async (req,res)=>{
     })    
 })
 
-router.post("/delete/:productId", async (req,res)=>{
+router.post("/delete/:productId",checkIfAuthenticated, async (req,res)=>{
     const product = await findProductViaId(req.params.productId)
+
+    req.flash("success_error", 
+    `Poster has been deleted`)
 
     await product.destroy();
     res.redirect("/products")
