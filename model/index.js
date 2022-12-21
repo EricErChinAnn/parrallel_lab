@@ -28,5 +28,12 @@ const User = bookshelf.model("User",{
     tableName:"users"
 })
 
+const CartItem = bookshelf.model("CartItem",{
+    tableName:"cart_items",
+    posters(){
+        return this.belongsTo("Poster")
+    }
+})
 
-module.exports = { Poster , MediaProperty , Tag , User}
+
+module.exports = { Poster , MediaProperty , Tag , User , CartItem }

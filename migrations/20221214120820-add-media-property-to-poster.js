@@ -18,7 +18,7 @@ exports.up = function(db) {
   return db.addForeignKey("posters","media_properties","media_properties_poster_fk",
   {"media_property_id":"id"},
   {
-    onDelete:"RESTRICT",
+    onDelete:"CASCADE",
     onUpdate:"RESTRICT"
   }
   );

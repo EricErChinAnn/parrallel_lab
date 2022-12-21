@@ -4,46 +4,103 @@ const async = require("hbs/lib/async");
 const router = express.Router();
 const { checkIfAuthenticated } = require("../../middlewares")
 
-const { bootstrapField, createProductForm } = require("../../forms")
+const { bootstrapField, createProductForm , createSearchForm } = require("../../forms")
 
 const { Poster, MediaProperty, Tag } = require("../../model/index");
-
-
-findProductViaId = async (productId) => {
-    const product = await Poster.where({
-        "id": productId
-    }).fetch({
-        "require": true,
-        withRelated:["tags"]
-    })
-
-    return product
-}
-
-getAllMediaProperties = async () => {
-    const mediaProperties = await MediaProperty.fetchAll().map((each)=>{
-       return [each.get("id"),each.get("name")]
-    })
-
-    return mediaProperties
-}
-
-getAllTags = async ()=>{
-    const allTags = await Tag.fetchAll().map((e)=>{
-        return [e.get("id"), e.get("name")]
-    })
-    return allTags
-}
-
+const dataLayer = require('../../dal/products')
 
 //show all post
 router.get("/", async (req, res) => {
-    let products = await Poster.collection().fetch({
-        withRelated:["media_property_id", "tags"]
-    });
 
-    res.render("./products/index.hbs", {
-        "products": products.toJSON()
+    const alltags = await dataLayer.getAllTags();
+    const allMediaProperties = await dataLayer.getAllMediaProperties();
+
+    //Add ["", 'Any category'] in to the array of category ((unshift add to front))
+    allMediaProperties.unshift(["", 'Any category'])
+
+    let searchForm = createSearchForm(allMediaProperties,alltags);
+    let searchResult = Poster.collection();
+
+    //search filtering
+    searchForm.handle(req, {
+        "success": async (form) =>{
+
+
+            if(form.data.title){
+                searchResult.where("title", "like",`%${form.data.title}%`)
+            }
+
+            if(form.data.min_cost){
+                searchResult.where("cost" ,">=",form.data.min_cost)
+            }
+
+            if(form.data.max_cost){
+                searchResult.where("cost" ,"<=",form.data.max_cost)
+            }
+
+            if(form.data.min_height){
+                searchResult.where("height" ,">=",form.data.min_height)
+            }
+
+            if(form.data.max_height){
+                searchResult.where("height" ,"<=",form.data.max_height)
+            }
+
+            if(form.data.min_width){
+                searchResult.where("width" ,">=",form.data.min_width)
+            }
+
+            if(form.data.max_width){
+                searchResult.where("width" ,"<=",form.data.max_width)
+            }
+
+            if(form.data.media_property_id){
+                searchResult.where("media_property_id","like",form.data.media_property_id)
+            }
+
+            if(form.data.tags){
+                searchResult.query("join","posters_tags","posters.id","poster_id")
+                .where("tag_id","in",form.data.tags.split(','))
+            }
+
+
+
+            let products = await searchResult.fetch({
+                withRelated:["media_property_id", "tags"]
+            })
+
+            res.render("products/index",{
+                "products":products.toJSON(),
+                'form': form.toHTML(bootstrapField)
+            })
+        
+        
+        },
+        "error": async (form)=>{
+
+            let products = await searchResult.fetch({
+                withRelated:["media_property_id", "tags"]
+            })
+
+            res.render("products/index",{
+                "products":products.toJSON(),
+                'form': form.toHTML(bootstrapField)
+            })
+
+        },
+        "empty": async (form)=>{
+
+            let products = await searchResult.fetch({
+                withRelated:["media_property_id", "tags"]
+            })
+
+            res.render("products/index",{
+                "products":products.toJSON(),
+                'form': form.toHTML(bootstrapField)
+            })
+
+        }
+
     })
 })
 
@@ -51,8 +108,8 @@ router.get("/", async (req, res) => {
 
 //Create new post
 router.get('/create',checkIfAuthenticated, async (req, res) => {
-    const allMediaProperties = await getAllMediaProperties();
-    const allTags = await getAllTags();
+    const allMediaProperties = await dataLayer.getAllMediaProperties();
+    const allTags = await dataLayer.getAllTags();
     
     const productForm = createProductForm(allMediaProperties, allTags);
 
@@ -66,8 +123,8 @@ router.get('/create',checkIfAuthenticated, async (req, res) => {
 
 router.post("/create",checkIfAuthenticated, async (req, res) => {
 
-    const allMediaProperties = await getAllMediaProperties();
-    const allTags = await getAllTags();
+    const allMediaProperties = await dataLayer.getAllMediaProperties();
+    const allTags = await dataLayer.getAllTags();
 
     const productForm = createProductForm(allMediaProperties, allTags);
 
@@ -82,6 +139,7 @@ router.post("/create",checkIfAuthenticated, async (req, res) => {
             productObject.set("height", form.data.height);
             productObject.set("width", form.data.width);
             productObject.set("media_property_id", form.data.media_property_id);
+            productObject.set("image_url", form.data.image_url);
             
             await productObject.save();
 
@@ -113,7 +171,10 @@ router.post("/create",checkIfAuthenticated, async (req, res) => {
             `Please fill in the required fields`)
 
             res.render("products/create.hbs", {
-                'form': form.toHTML(bootstrapField)
+                'form': form.toHTML(bootstrapField),
+                cloudinaryName: process.env.CLOUDINARY_NAME,
+                cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
+                cloudinaryPreset: process.env.CLOUDINARY_UPLOAD_PRESET
             })
         }
     })
@@ -123,10 +184,10 @@ router.post("/create",checkIfAuthenticated, async (req, res) => {
 
 //Update a post
 router.get("/update/:productId",checkIfAuthenticated, async (req, res) => {
-    const product = await findProductViaId(req.params.productId)
+    const product = await dataLayer.findProductViaId(req.params.productId)
 
-    const allMediaProperties = await getAllMediaProperties();
-    const allTags = await getAllTags();
+    const allMediaProperties = await dataLayer.getAllMediaProperties();
+    const allTags = await dataLayer.getAllTags();
 
     const productForm = createProductForm(allMediaProperties, allTags);
 
@@ -157,10 +218,10 @@ router.get("/update/:productId",checkIfAuthenticated, async (req, res) => {
 })
 
 router.post("/update/:productId",checkIfAuthenticated, async (req, res) => {
-    const product = await findProductViaId(req.params.productId);
+    const product = await dataLayer.findProductViaId(req.params.productId);
 
-    const allMediaProperties = await getAllMediaProperties();
-    const allTags = await getAllTags();
+    const allMediaProperties = await dataLayer.getAllMediaProperties();
+    const allTags = await dataLayer.getAllTags();
 
     const productForm = createProductForm(allMediaProperties, allTags);
 
@@ -195,19 +256,19 @@ router.post("/update/:productId",checkIfAuthenticated, async (req, res) => {
 
 
 
-//Delete a post
+//Delete a post.gitpod.io/api/products/delete/33
 router.get("/delete/:productId",checkIfAuthenticated, async (req,res)=>{
-    const product = await findProductViaId(req.params.productId)
-    
+    const product = await dataLayer.findProductViaId(req.params.productId)
+    console.log("get deee")
     res.render("products/delete",{
         "product":product.toJSON()
     })    
 })
 
-router.post("/delete/:productId",checkIfAuthenticated, async (req,res)=>{
-    const product = await findProductViaId(req.params.productId)
-
-    req.flash("success_error", 
+router.post("/delete/:productId", async (req,res)=>{
+    const product = await dataLayer.findProductViaId(req.params.productId)
+    
+    req.flash("success_messages", 
     `Poster has been deleted`)
 
     await product.destroy();

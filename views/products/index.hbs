@@ -1,6 +1,37 @@
 {{#extends "base"}}
 
 {{#block "content"}}
+
+
+<button type="button" class="btn btn-primary my-3" data-bs-toggle="modal" data-bs-target="#exampleModal">
+  Search Filter
+</button>
+
+<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="exampleModalLabel">Search Filter</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form method="GET">
+            {{{form}}}
+            <input type="submit" class="mb-3 mt-3 btn btn-primary" value="Search"/>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+{{!-- <form method="GET">
+   {{{form}}}
+    <input type="submit" class="mb-3 mt-3 btn btn-primary" value="Search"/>
+</form> --}}
+
+
+
 <table class="table">
     <tread>
         <th>ID</th>
@@ -38,8 +69,9 @@
             </td>
             <td>
                 <div class="d-flex flex-row">
-                    <a href="/products/update/{{this.id}}" class="btn btn-primary m-1">Edit</a>
-                    <a href="/products/delete/{{this.id}}" class="btn btn-danger m-1">Delete</a>
+                  <a href="/cart/add/{{this.id}}" class="btn btn-success btn-sm">Add to cart</a>
+                  <a href="/products/update/{{this.id}}" class="btn btn-primary m-1">Edit</a>
+                  <a href="/products/delete/{{this.id}}" class="btn btn-danger m-1">Delete</a>
                 </div>
             </td>
         </tr>

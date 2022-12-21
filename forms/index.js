@@ -158,9 +158,94 @@ const createLoginForm = ()=>{
     })
 }
 
+const createSearchForm = (media_properties , tags)=>{
+    return forms.create({
+        "title": fields.string({
+            required:false,
+            errorAfterField:true,
+            cssClasses:{
+                label:["form-label"]
+            }
+        }),
+        "min_cost":fields.number({
+            label:"Min Cost (in Cents)",
+            required:false,
+            errorAfterField:true,
+            validators:[validators.integer()],
+            widget:widgets.number(),
+            cssClasses:{
+                label:["form-label"]
+            }
+        }),
+        "max_cost":fields.number({
+            label:"Max Cost (in Cents)",
+            required:false,
+            errorAfterField:true,
+            validators:[validators.integer()],
+            widget:widgets.number(),
+            cssClasses:{
+                label:["form-label"]
+            }
+        }),
+        "media_property_id":fields.string({
+            label: 'Media Properties',
+            required: false,
+            widget: widgets.select(),
+            choices: media_properties
+        }),
+        "tags":fields.string({
+            required: false,
+            errorAfterField:true,
+            widget: widgets.multipleSelect(),
+            choices: tags
+        }),
+        "min_height":fields.number({
+            label:"Min Height (in CM)",
+            required:false,
+            errorAfterField:true,
+            validators:[validators.integer()],
+            widget:widgets.number(),
+            cssClasses:{
+                label:["form-label"]
+            }
+        }),
+        "max_height":fields.number({
+            label:"Max Height (in CM)",
+            required:false,
+            errorAfterField:true,
+            validators:[validators.integer()],
+            widget:widgets.number(),
+            cssClasses:{
+                label:["form-label"]
+            }
+        }),
+        "min_width":fields.number({
+            label:"Min Width (in CM)",
+            required:false,
+            errorAfterField:true,
+            validators:[validators.integer()],
+            widget:widgets.number(),
+            cssClasses:{
+                label:["form-label"]
+            }
+        }),
+        "max_width ":fields.number({
+            label:"Max Width (in CM)",
+            required:false,
+            errorAfterField:true,
+            validators:[validators.integer()],
+            widget:widgets.number(),
+            cssClasses:{
+                label:["form-label"]
+            }
+        })
+    }) 
+}
+
 module.exports = { 
     createProductForm , 
     bootstrapField , 
     createRegistrationForm,
-    createLoginForm
+    createLoginForm,
+    createSearchForm
 };

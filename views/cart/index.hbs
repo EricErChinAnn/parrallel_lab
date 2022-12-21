@@ -1,0 +1,53 @@
+{{#extends 'base'}}
+
+{{#block 'content'}}
+
+<table class="table">
+    <tread>
+        <th>Title</th>
+        <th>Cost in CENTS</th>
+        <th>Height in CM</th>
+        <th>Width in CM</th>
+        <th>Media Property</th>
+        <th>Image</th>
+        <th>Tags</th>
+        <th>Quantity</th>
+    </tread>
+    <tbody>
+        {{#each shoppingCart}}
+        <tr>
+            <td>{{this.posters.title}}</td>
+            <td>{{this.posters.cost}}</td>
+            <td>{{this.posters.height}}</td>
+            <td>{{this.posters.width}}</td>
+            <td>{{this.posters.media_property_id.name}}</td>
+            <td>
+                {{#if this.posters.image_url}}
+                    <img src="{{this.posters.image_url}}" style="height:auto; width:100px;"/>
+                {{/if}}
+            </td>
+            <td>
+                {{#each this.posters.tags}}
+                <span class="badge bg-info">{{this.name}}</span>
+                {{/each}}
+            </td>
+            <td>
+                <form method="POST" action="/cart/{{this.poster_id}}/quantity/update">
+                <input type="hidden" name="_csrf" value="{{../csrfToken}}"/>
+                <h5>
+                    Quantity: <input type="text" name="newQuantity" value="{{this.quantity}}" style="width:30px" /> 
+                    <input type="submit" value="Update Quantity" class="btn btn-success btn-sm" />
+                </h5>
+                <a href="/cart/remove/{{this.posters.id}}" class="btn btn-danger">Remove</a>
+            </form>
+            </td>
+        </tr>
+        {{/each}}
+    </tbody>
+</table>
+
+<a href="/checkout" class="btn btn-success btn-lg">Checkout</a>
+
+{{/block}}
+
+{{/extends}}

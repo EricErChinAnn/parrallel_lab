@@ -25,7 +25,7 @@ exports.up = function (db) {
               name: 'posters_tags_posters_fk',
               table: 'posters',
               rules: {
-                  onDelete: 'RESTRICT',
+                  onDelete: 'CASCADE',
                   onUpdate: 'RESTRICT'
               },
               mapping: 'id'
@@ -39,7 +39,7 @@ exports.up = function (db) {
               name: 'posters_tags_tags_fk',
               table: 'tags',
               rules: {
-                  onDelete: 'RESTRICT',
+                  onDelete: 'CASCADE',
                   onUpdate: 'RESTRICT'
               },
               mapping: 'id'
